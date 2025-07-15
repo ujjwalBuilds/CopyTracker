@@ -1,65 +1,75 @@
-// Simple version with extensive error checking
+// Robust content script that handles different contexts
 (function () {
   "use strict";
 
-  // Check if already injected
+  // Prevent multiple injections
   if (window.copyTrackerInjected) {
     return;
   }
   window.copyTrackerInjected = true;
 
-  console.log("CopyTracker content script loading...");
+  console.log("CopyTracker: Initializing...");
 
-  function sendCopyEvent(text, url, time) {
-    // Check if chrome runtime is available
-    if (typeof chrome === "undefined") {
-      console.warn("Chrome object not available");
-      return;
-    }
+  function isChromeExtensionAvailable() {
+    return (
+      typeof chrome !== "undefined" &&
+      chrome.runtime &&
+      chrome.runtime.sendMessage &&
+      chrome.runtime.id
+    );
+  }
 
-    if (!chrome.runtime) {
-      console.warn("Chrome runtime not available");
-      return;
-    }
-
-    if (!chrome.runtime.sendMessage) {
-      console.warn("Chrome runtime.sendMessage not available");
+  function sendMessageToBackground(data) {
+    if (!isChromeExtensionAvailable()) {
+      console.warn("CopyTracker: Chrome extension APIs not available");
       return;
     }
 
     try {
-      chrome.runtime.sendMessage(
-        {
-          type: "copy-event",
-          text: text,
-          url: url,
-          time: time,
-        },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            console.error("Message sending failed:", chrome.runtime.lastError);
-          } else {
-            console.log("Copy event sent successfully");
-          }
+      chrome.runtime.sendMessage(data, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            "CopyTracker: Message failed:",
+            chrome.runtime.lastError.message
+          );
+        } else {
+          console.log("CopyTracker: Message sent successfully");
         }
-      );
+      });
     } catch (error) {
-      console.error("Error sending copy event:", error);
+      console.error("CopyTracker: Error sending message:", error);
     }
   }
 
-  // Add copy event listener
-  document.addEventListener("copy", () => {
-    console.log("Copy event detected");
+  function handleCopyEvent() {
+    console.log("CopyTracker: Copy event detected");
 
     const selection = document.getSelection()?.toString();
-    if (selection && selection.trim()) {
-      console.log("Selection found:", selection.substring(0, 50) + "...");
-      sendCopyEvent(selection, window.location.href, new Date().toISOString());
-    } else {
-      console.log("No selection found");
+    if (!selection || !selection.trim()) {
+      console.log("CopyTracker: No text selected");
+      return;
     }
-  });
 
-  console.log("CopyTracker content script loaded successfully");
+    const copyData = {
+      type: "copy-event",
+      text: selection,
+      url: window.location.href,
+      time: new Date().toISOString(),
+    };
+
+    console.log("CopyTracker: Sending copy data:", copyData);
+    sendMessageToBackground(copyData);
+  }
+
+  // Add event listener
+  document.addEventListener("copy", handleCopyEvent);
+
+  // Test if extension is working
+  if (isChromeExtensionAvailable()) {
+    console.log("CopyTracker: Successfully initialized with Chrome APIs");
+  } else {
+    console.warn(
+      "CopyTracker: Chrome APIs not available - extension may not work"
+    );
+  }
 })();
