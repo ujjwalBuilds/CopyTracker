@@ -19,8 +19,6 @@
 
 ![CopyTracker Screenshot](./image.png)
 
-> *(Replace this file with your actual screenshot saved as `screenshot.png` in the root folder)*
-
 ---
 
 ## ⚙️ How to Use
@@ -34,6 +32,3 @@
 7. Click the CopyTracker icon in the toolbar to view your clipboard history
 
 ---
-
-## 📁 Folder Structure
-
